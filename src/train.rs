@@ -1,6 +1,68 @@
+use crate::simple_players::OpponentWrapper;
 use crate::traits::*;
 
-// pub fn train<P: LearningPlayer>(env: &mut Environment, player: P) {}
+/// Train a given player against itself
+pub fn train<S, A, P, E>(
+    env: &mut E,
+    player: &mut P,
+    train_episodes: u32,
+    eval_episodes: u32,
+    cycles: u32,
+    opponent_epsilon: f64,
+) where
+    S: State,
+    A: Action,
+    P: LearningPlayer<S, A>,
+    E: Environment<State = S, Action = A>,
+{
+    let mut adversary = OpponentWrapper::new(player.freezed(), opponent_epsilon);
+    for cycle in 1..=cycles {
+        // Train against a fixed adversary
+        let train_score = run_duel(env, player, &mut adversary, train_episodes);
+
+        // Eval the newly trained player against the fixed adversary
+        let mut new_adversary = OpponentWrapper::new(player.freezed(), opponent_epsilon);
+        let eval_score = run_duel(
+            env,
+            new_adversary.inner_mut(),
+            adversary.inner_mut(),
+            eval_episodes,
+        );
+
+        adversary = new_adversary;
+
+        println!(
+            "Cycle {}/{}: avg train score = {}, avg eval score = {}",
+            cycle, cycles, train_score, eval_score
+        );
+
+        player.on_cycle_end();
+    }
+}
+
+/// Run multiple matches between two players, alternating which one starts the match
+/// Since we assume this is a zero-sum game, the score of the second one is simply the opposite
+pub fn run_duel<S, A, P1, P2, E>(
+    env: &mut E,
+    player_1: &mut P1,
+    player_2: &mut P2,
+    episodes: u32,
+) -> f64
+where
+    S: State,
+    A: Action,
+    P1: Player<S, A>,
+    P2: Player<S, A>,
+    E: Environment<State = S, Action = A>,
+{
+    assert_eq!(episodes % 2, 0, "episodes must be even");
+    let mut score = 0.;
+    for _ in (0..episodes).step_by(2) {
+        score += run_match(env, player_1, player_2);
+        score -= run_match(env, player_2, player_1);
+    }
+    score / episodes as f64
+}
 
 /// Run a match between two players and return the score the first one.
 /// Since we assume this is a zero-sum game, the score of the second one is simply the opposite

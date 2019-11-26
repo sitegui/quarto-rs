@@ -20,9 +20,15 @@ pub trait Environment {
 /// A player that can take actions from a given state.
 /// Unlink the environment, that defines it own state and action, players are generic over them
 pub trait Player<S: State, A: Action> {
-    fn start(&mut self, state: S, actions: Vec<A>) -> A;
+    fn take_action(&mut self, state: S, actions: Vec<A>) -> A;
 
-    fn step(&mut self, state: S, actions: Vec<A>, reward: f64) -> A;
+    fn start(&mut self, state: S, actions: Vec<A>) -> A {
+        self.take_action(state, actions)
+    }
+
+    fn step(&mut self, state: S, actions: Vec<A>, _reward: f64) -> A {
+        self.take_action(state, actions)
+    }
 
     fn end(&mut self, _state: S, _reward: f64) {}
 }
@@ -32,4 +38,5 @@ pub trait Player<S: State, A: Action> {
 pub trait LearningPlayer<S: State, A: Action>: Player<S, A> {
     type Freezed: Player<S, A>;
     fn freezed(&mut self) -> Self::Freezed;
+    fn on_cycle_end(&self) {}
 }

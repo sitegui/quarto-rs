@@ -94,6 +94,12 @@ impl Environment {
             _ => false,
         }
     }
+
+    fn apply_position(&mut self, position: Position) {
+        assert!(remove_item(&mut self.available_positions, &position));
+        let Position { row, col } = position;
+        self.state.board[row as usize][col as usize] = Some(self.state.reserve);
+    }
 }
 
 impl traits::Environment for Environment {
@@ -109,10 +115,8 @@ impl traits::Environment for Environment {
 
     fn step(&mut self, action: Action) -> (State, f64, bool, Vec<Action>) {
         // Apply move
+        self.apply_position(action.position);
         assert!(remove_item(&mut self.available_pieces, &action.piece));
-        assert!(remove_item(&mut self.available_positions, &action.position));
-        let Position { row, col } = action.position;
-        self.state.board[row as usize][col as usize] = Some(self.state.reserve);
         self.state.reserve = action.piece;
 
         // Check new state
@@ -121,8 +125,7 @@ impl traits::Environment for Environment {
             None if self.available_pieces.is_empty() => {
                 // Finalize the game if the last piece is to be chosen
                 let final_pos = self.available_positions[0];
-                self.state.board[final_pos.row as usize][final_pos.col as usize] =
-                    Some(self.state.reserve);
+                self.apply_position(final_pos);
                 let reward = self.final_reward(final_pos).unwrap();
                 (-reward, true)
             }

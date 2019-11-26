@@ -2,18 +2,6 @@ use crate::traits::*;
 use rand::prelude::*;
 use std::collections::HashMap;
 
-pub struct DummyPlayer {}
-
-impl<S: State, A: Action> Player<S, A> for DummyPlayer {
-    fn start(&mut self, _state: S, actions: Vec<A>) -> A {
-        actions[0].clone()
-    }
-
-    fn step(&mut self, _state: S, actions: Vec<A>, _reward: f64) -> A {
-        actions[0].clone()
-    }
-}
-
 #[derive(Clone)]
 pub struct QLearningPlayer<S: State> {
     q_table: HashMap<S, Vec<f64>>,
@@ -40,7 +28,19 @@ impl<S: State> QLearningPlayer<S> {
         }
     }
 
-    fn take_action<A: Action>(&mut self, state: S, actions: &Vec<A>) -> A {
+    fn update_q_table(&mut self, new_value: f64) {
+        // Read the q-values (we can assume they were already initialized by take_action())
+        let action_values = self
+            .q_table
+            .get_mut(self.prev_state.as_ref().unwrap())
+            .unwrap();
+        let i = self.prev_action_index.unwrap();
+        action_values[i] += self.alpha * (new_value - action_values[i]);
+    }
+}
+
+impl<S: State, A: Action> Player<S, A> for QLearningPlayer<S> {
+    fn take_action(&mut self, state: S, actions: Vec<A>) -> A {
         self.prev_state = Some(state.clone());
 
         // Ensure the q-values are initialized for this state
@@ -61,28 +61,13 @@ impl<S: State> QLearningPlayer<S> {
         actions[self.prev_action_index.unwrap()].clone()
     }
 
-    fn update_q_table(&mut self, new_value: f64) {
-        // Read the q-values (we can assume they were already initialized by take_action())
-        let action_values = self
-            .q_table
-            .get_mut(self.prev_state.as_ref().unwrap())
-            .unwrap();
-        let i = self.prev_action_index.unwrap();
-        action_values[i] += self.alpha * (new_value - action_values[i]);
-    }
-}
-
-impl<S: State, A: Action> Player<S, A> for QLearningPlayer<S> {
-    fn start(&mut self, state: S, actions: Vec<A>) -> A {
-        self.take_action(state, &actions)
-    }
-
     fn step(&mut self, state: S, actions: Vec<A>, reward: f64) -> A {
+        let next_action = self.take_action(state.clone(), actions);
         // Read the q-values (we can assume they were already initialized by take_action())
         let action_values = self.q_table.get(&state).unwrap();
         let new_value = reward + self.gamma * max(action_values).1;
         self.update_q_table(new_value);
-        self.take_action(state, &actions)
+        next_action
     }
 
     fn end(&mut self, _state: S, reward: f64) {
@@ -98,14 +83,18 @@ impl<S: State, A: Action> LearningPlayer<S, A> for QLearningPlayer<S> {
             q_table: self.q_table.clone(),
         }
     }
+
+    fn on_cycle_end(&self) {
+        println!("Q-table size = {}", self.q_table.len());
+    }
 }
 
 pub struct QLearnedPlayer<S: State> {
     q_table: HashMap<S, Vec<f64>>,
 }
 
-impl<S: State> QLearnedPlayer<S> {
-    fn take_action<A: Action>(&self, state: S, actions: &Vec<A>) -> A {
+impl<S: State, A: Action> Player<S, A> for QLearnedPlayer<S> {
+    fn take_action(&mut self, state: S, actions: Vec<A>) -> A {
         match self.q_table.get(&state) {
             None => {
                 // Here we act as if the row is made of only zeros, in which case
@@ -114,16 +103,6 @@ impl<S: State> QLearnedPlayer<S> {
             }
             Some(action_values) => actions[max(action_values).0].clone(),
         }
-    }
-}
-
-impl<S: State, A: Action> Player<S, A> for QLearnedPlayer<S> {
-    fn start(&mut self, state: S, actions: Vec<A>) -> A {
-        self.take_action(state, &actions)
-    }
-
-    fn step(&mut self, state: S, actions: Vec<A>, _reward: f64) -> A {
-        self.take_action(state, &actions)
     }
 }
 
