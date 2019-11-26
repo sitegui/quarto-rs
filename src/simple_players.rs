@@ -11,6 +11,12 @@ impl<S: State, A: Action> Player<S, A> for DummyPlayer {
 
 pub struct RandomPlayer {}
 
+impl RandomPlayer {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
 impl<S: State, A: Action> Player<S, A> for RandomPlayer {
     fn take_action(&mut self, _state: S, actions: Vec<A>) -> A {
         let mut rng = thread_rng();

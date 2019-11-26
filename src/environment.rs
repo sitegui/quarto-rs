@@ -1,7 +1,7 @@
 use crate::board::*;
 use crate::traits;
 
-#[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Debug, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub struct State {
     board: [[Option<Piece>; 4]; 4],
     reserve: Piece,
@@ -11,7 +11,7 @@ impl State {
     fn new() -> Self {
         State {
             board: [[None; 4]; 4],
-            reserve: Piece::from(0),
+            reserve: Piece::from(15),
         }
     }
 }
@@ -33,9 +33,10 @@ impl Environment {
         }
     }
 
+    /// Return valid actions for the current state
     fn actions(&self) -> Vec<Action> {
         let mut actions =
-            Vec::with_capacity(self.available_pieces.len() * self.available_pieces.len());
+            Vec::with_capacity(self.available_positions.len() * self.available_pieces.len());
         for &position in &self.available_positions {
             for &piece in &self.available_pieces {
                 actions.push(Action { piece, position });
@@ -45,21 +46,16 @@ impl Environment {
     }
 
     /// Return the final reward (if any), checking all lines that cross the given position
-    fn final_reward(&self, pos: Position) -> Option<f64> {
-        macro_rules! pos {
-            ($row:expr, $col:expr) => {
-                Position {
-                    row: $row,
-                    col: $col,
-                }
-            };
+    fn final_reward(&self, position: Position) -> Option<f64> {
+        fn pos(row: u8, col: u8) -> Position {
+            Position { row, col }
         }
 
-        let (r, c) = (pos.row, pos.col);
-        if self.has_common_trait(pos!(r, 0), pos!(r, 1), pos!(r, 2), pos!(r, 3))
-            || self.has_common_trait(pos!(0, c), pos!(1, c), pos!(2, c), pos!(3, c))
-            || self.has_common_trait(pos!(0, 0), pos!(1, 1), pos!(2, 2), pos!(3, 3))
-            || self.has_common_trait(pos!(3, 0), pos!(2, 1), pos!(1, 2), pos!(0, 3))
+        let (r, c) = (position.row, position.col);
+        if self.has_common_trait(pos(r, 0), pos(r, 1), pos(r, 2), pos(r, 3))
+            || self.has_common_trait(pos(0, c), pos(1, c), pos(2, c), pos(3, c))
+            || self.has_common_trait(pos(0, 0), pos(1, 1), pos(2, 2), pos(3, 3))
+            || self.has_common_trait(pos(3, 0), pos(2, 1), pos(1, 2), pos(0, 3))
         {
             Some(100.)
         } else if self.available_positions.is_empty() {
@@ -95,6 +91,7 @@ impl Environment {
         }
     }
 
+    /// Put the reserve piece at the given position
     fn apply_position(&mut self, position: Position) {
         assert!(remove_item(&mut self.available_positions, &position));
         let Position { row, col } = position;

@@ -1,4 +1,4 @@
-use crate::simple_players::OpponentWrapper;
+use crate::simple_players::*;
 use crate::traits::*;
 
 /// Train a given player against itself
@@ -15,6 +15,7 @@ pub fn train<S, A, P, E>(
     P: LearningPlayer<S, A>,
     E: Environment<State = S, Action = A>,
 {
+    let mut random_adversary = RandomPlayer::new();
     let mut adversary = OpponentWrapper::new(player.freezed(), opponent_epsilon);
     for cycle in 1..=cycles {
         // Train against a fixed adversary
@@ -29,14 +30,21 @@ pub fn train<S, A, P, E>(
             eval_episodes,
         );
 
+        let eval_random_score = run_duel(
+            env,
+            new_adversary.inner_mut(),
+            &mut random_adversary,
+            eval_episodes,
+        );
+
         adversary = new_adversary;
 
         println!(
-            "Cycle {}/{}: avg train score = {}, avg eval score = {}",
-            cycle, cycles, train_score, eval_score
+            "Cycle {}/{}: avg train score = {}, avg eval score = {}, avg eval random score = {}",
+            cycle, cycles, train_score, eval_score, eval_random_score
         );
 
-        player.on_cycle_end();
+        player.cycle_end();
     }
 }
 

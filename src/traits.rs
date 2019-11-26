@@ -37,6 +37,8 @@ pub trait Player<S: State, A: Action> {
 /// snapshots of itself
 pub trait LearningPlayer<S: State, A: Action>: Player<S, A> {
     type Freezed: Player<S, A>;
-    fn freezed(&mut self) -> Self::Freezed;
-    fn on_cycle_end(&self) {}
+
+    fn freezed(&self) -> Self::Freezed;
+
+    fn cycle_end(&self) {}
 }

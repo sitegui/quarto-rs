@@ -1,6 +1,6 @@
 use crate::traits;
 
-#[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Debug, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub struct Piece {
     pub hollow: bool,
     pub square: bool,
@@ -28,7 +28,7 @@ impl From<Piece> for u8 {
     }
 }
 
-#[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Debug, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub struct Position {
     pub row: u8,
     pub col: u8,
@@ -49,7 +49,7 @@ impl From<Position> for u8 {
     }
 }
 
-#[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct Action {
     pub position: Position,
     pub piece: Piece,

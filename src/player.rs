@@ -20,7 +20,7 @@ impl<S: State> QLearningPlayer<S> {
             q_table: HashMap::new(),
             epsilon: 1.,
             min_epsilon: 0.1,
-            epsilon_decay: 0.99995,
+            epsilon_decay: 0.999995,
             alpha: 0.1,
             gamma: 1.,
             prev_state: None,
@@ -58,7 +58,7 @@ impl<S: State, A: Action> Player<S, A> for QLearningPlayer<S> {
         };
 
         self.prev_action_index = Some(action_index);
-        actions[self.prev_action_index.unwrap()].clone()
+        actions[action_index].clone()
     }
 
     fn step(&mut self, state: S, actions: Vec<A>, reward: f64) -> A {
@@ -78,14 +78,19 @@ impl<S: State, A: Action> Player<S, A> for QLearningPlayer<S> {
 
 impl<S: State, A: Action> LearningPlayer<S, A> for QLearningPlayer<S> {
     type Freezed = QLearnedPlayer<S>;
-    fn freezed(&mut self) -> QLearnedPlayer<S> {
+
+    fn freezed(&self) -> QLearnedPlayer<S> {
         QLearnedPlayer {
             q_table: self.q_table.clone(),
         }
     }
 
-    fn on_cycle_end(&self) {
-        println!("Q-table size = {}", self.q_table.len());
+    fn cycle_end(&self) {
+        println!(
+            "Q-table size = {}, epsilon = {}",
+            self.q_table.len(),
+            self.epsilon
+        );
     }
 }
 

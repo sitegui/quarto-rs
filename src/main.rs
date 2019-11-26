@@ -12,5 +12,5 @@ use train::*;
 fn main() {
     let mut env = Environment::new();
     let mut player = QLearningPlayer::new();
-    train(&mut env, &mut player, 10_000, 1_000, 10, 0.1);
+    train(&mut env, &mut player, 20_000, 1_000, 50, 0.1);
 }
