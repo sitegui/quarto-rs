@@ -30,19 +30,22 @@ pub fn train<S, A, P, E>(
             eval_episodes,
         );
 
+        new_adversary.inner_mut().reset_stats();
         let eval_random_score = run_duel(
             env,
             new_adversary.inner_mut(),
             &mut random_adversary,
             eval_episodes,
         );
+        let eval_random_stats = new_adversary.inner_mut().stats();
 
         adversary = new_adversary;
 
         println!(
-            "Cycle {}/{}: avg train score = {}, avg eval score = {}, avg eval random score = {}",
+            "== Cycle {}/{} ==\navg train score = {}, avg eval score = {}, avg eval random score = {}",
             cycle, cycles, train_score, eval_score, eval_random_score
         );
+        println!("Eval random stats: {:?}", eval_random_stats);
 
         player.cycle_end();
     }

@@ -1,7 +1,9 @@
 ///! Define traits for environment, action, players, etc
 
 /// The state of the environment
-pub trait State: Clone + std::hash::Hash + Eq {}
+pub trait State: Clone + std::hash::Hash + Eq {
+    fn game_depth(&self) -> u16;
+}
 
 /// An action that can be applied to an environment
 pub trait Action: Clone {}
@@ -20,6 +22,8 @@ pub trait Environment {
 /// A player that can take actions from a given state.
 /// Unlink the environment, that defines it own state and action, players are generic over them
 pub trait Player<S: State, A: Action> {
+    type Stats: std::fmt::Debug;
+
     fn take_action(&mut self, state: S, actions: Vec<A>) -> A;
 
     fn start(&mut self, state: S, actions: Vec<A>) -> A {
@@ -31,6 +35,12 @@ pub trait Player<S: State, A: Action> {
     }
 
     fn end(&mut self, _state: S, _reward: f64) {}
+
+    fn reset_stats(&mut self) {}
+
+    fn stats(&self) -> Option<Self::Stats> {
+        None
+    }
 }
 
 /// A player that can generated a fixed version of self, used to train against previous
@@ -40,5 +50,5 @@ pub trait LearningPlayer<S: State, A: Action>: Player<S, A> {
 
     fn freezed(&self) -> Self::Freezed;
 
-    fn cycle_end(&self) {}
+    fn cycle_end(&mut self) {}
 }

@@ -4,6 +4,7 @@ use rand::prelude::*;
 pub struct DummyPlayer {}
 
 impl<S: State, A: Action> Player<S, A> for DummyPlayer {
+    type Stats = ();
     fn take_action(&mut self, _state: S, actions: Vec<A>) -> A {
         actions[0].clone()
     }
@@ -18,6 +19,7 @@ impl RandomPlayer {
 }
 
 impl<S: State, A: Action> Player<S, A> for RandomPlayer {
+    type Stats = ();
     fn take_action(&mut self, _state: S, actions: Vec<A>) -> A {
         let mut rng = thread_rng();
         actions.choose(&mut rng).unwrap().clone()
@@ -47,6 +49,7 @@ impl<S: State, A: Action, P: Player<S, A>> OpponentWrapper<S, A, P> {
 }
 
 impl<S: State, A: Action, P: Player<S, A>> Player<S, A> for OpponentWrapper<S, A, P> {
+    type Stats = ();
     fn take_action(&mut self, state: S, actions: Vec<A>) -> A {
         if random::<f64>() <= self.epsilon {
             // Take a random action

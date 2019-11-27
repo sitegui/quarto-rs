@@ -16,7 +16,19 @@ impl State {
     }
 }
 
-impl traits::State for State {}
+impl traits::State for State {
+    fn game_depth(&self) -> u16 {
+        let mut depth = 0;
+        for row in &self.board {
+            for cell in row {
+                if cell.is_some() {
+                    depth += 1;
+                }
+            }
+        }
+        depth
+    }
+}
 
 pub struct Environment {
     state: State,
