@@ -16,7 +16,7 @@ pub trait Environment {
 
     fn reset(&mut self) -> (Self::State, Vec<Self::Action>);
 
-    fn step(&mut self, action: Self::Action) -> (Self::State, f64, bool, Vec<Self::Action>);
+    fn step(&mut self, action: Self::Action) -> (Self::State, f32, bool, Vec<Self::Action>);
 }
 
 /// A player that can take actions from a given state.
@@ -30,11 +30,11 @@ pub trait Player<S: State, A: Action> {
         self.take_action(state, actions)
     }
 
-    fn step(&mut self, state: S, actions: Vec<A>, _reward: f64) -> A {
+    fn step(&mut self, state: S, actions: Vec<A>, _reward: f32) -> A {
         self.take_action(state, actions)
     }
 
-    fn end(&mut self, _state: S, _reward: f64) {}
+    fn end(&mut self, _state: S, _reward: f32) {}
 
     fn reset_stats(&mut self) {}
 

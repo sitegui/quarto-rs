@@ -58,7 +58,7 @@ impl Environment {
     }
 
     /// Return the final reward (if any), checking all lines that cross the given position
-    fn final_reward(&self, position: Position) -> Option<f64> {
+    fn final_reward(&self, position: Position) -> Option<f32> {
         fn pos(row: u8, col: u8) -> Position {
             Position { row, col }
         }
@@ -122,7 +122,7 @@ impl traits::Environment for Environment {
         (self.state, self.actions())
     }
 
-    fn step(&mut self, action: Action) -> (State, f64, bool, Vec<Action>) {
+    fn step(&mut self, action: Action) -> (State, f32, bool, Vec<Action>) {
         // Apply move
         self.apply_position(action.position);
         assert!(remove_item(&mut self.available_pieces, &action.piece));

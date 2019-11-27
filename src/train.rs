@@ -8,7 +8,7 @@ pub fn train<S, A, P, E>(
     train_episodes: u32,
     eval_episodes: u32,
     cycles: u32,
-    opponent_epsilon: f64,
+    opponent_epsilon: f32,
 ) where
     S: State,
     A: Action,
@@ -58,7 +58,7 @@ pub fn run_duel<S, A, P1, P2, E>(
     player_1: &mut P1,
     player_2: &mut P2,
     episodes: u32,
-) -> f64
+) -> f32
 where
     S: State,
     A: Action,
@@ -72,12 +72,12 @@ where
         score += run_match(env, player_1, player_2);
         score -= run_match(env, player_2, player_1);
     }
-    score / episodes as f64
+    score / episodes as f32
 }
 
 /// Run a match between two players and return the score the first one.
 /// Since we assume this is a zero-sum game, the score of the second one is simply the opposite
-pub fn run_match<S, A, P1, P2, E>(env: &mut E, player_1: &mut P1, player_2: &mut P2) -> f64
+pub fn run_match<S, A, P1, P2, E>(env: &mut E, player_1: &mut P1, player_2: &mut P2) -> f32
 where
     S: State,
     A: Action,

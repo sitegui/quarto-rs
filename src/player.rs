@@ -24,12 +24,12 @@ impl QLearningStats {
 #[derive(Clone)]
 pub struct QLearningPlayer<S: State> {
     // A map from state, to (hit count, q-value)
-    q_table: HashMap<S, (u32, Vec<f64>)>,
-    epsilon: f64,
-    min_epsilon: f64,
-    epsilon_decay: f64,
-    alpha: f64,
-    gamma: f64,
+    q_table: HashMap<S, (u32, Vec<f32>)>,
+    epsilon: f32,
+    min_epsilon: f32,
+    epsilon_decay: f32,
+    alpha: f32,
+    gamma: f32,
     prev_state: Option<S>,
     prev_action_index: Option<usize>,
     stats: QLearningStats,
@@ -50,7 +50,7 @@ impl<S: State> QLearningPlayer<S> {
         }
     }
 
-    fn update_q_table(&mut self, new_value: f64) {
+    fn update_q_table(&mut self, new_value: f32) {
         // Read the q-values (we can assume they were already initialized by take_action())
         let action_values = self
             .q_table
@@ -76,7 +76,7 @@ impl<S: State, A: Action> Player<S, A> for QLearningPlayer<S> {
             .or_insert_with(|| (0, vec![0.; actions.len()]))
             .1;
 
-        let action_index = if random::<f64>() <= self.epsilon {
+        let action_index = if random::<f32>() <= self.epsilon {
             // Take a random action
             self.stats.random_actions += 1;
             thread_rng().gen_range(0, actions.len())
@@ -94,7 +94,7 @@ impl<S: State, A: Action> Player<S, A> for QLearningPlayer<S> {
         actions[action_index].clone()
     }
 
-    fn step(&mut self, state: S, actions: Vec<A>, reward: f64) -> A {
+    fn step(&mut self, state: S, actions: Vec<A>, reward: f32) -> A {
         // Read the q-values (we can assume they were already initialized by take_action())
         let max_q_value = &self
             .q_table
@@ -106,7 +106,7 @@ impl<S: State, A: Action> Player<S, A> for QLearningPlayer<S> {
         self.take_action(state.clone(), actions)
     }
 
-    fn end(&mut self, _state: S, reward: f64) {
+    fn end(&mut self, _state: S, reward: f32) {
         self.update_q_table(reward);
         self.epsilon = (self.epsilon * self.epsilon_decay).max(self.min_epsilon);
     }
@@ -160,7 +160,7 @@ where
                 (
                     key.0,
                     key.1,
-                    (value.iter().map(|&x| x as f64).sum::<f64>() / value.len() as f64) as u32,
+                    (value.iter().map(|&x| x as f32).sum::<f32>() / value.len() as f32) as u32,
                     value.len() as u32,
                 )
             })
@@ -180,7 +180,7 @@ where
 }
 
 pub struct QLearnedPlayer<S: State> {
-    q_table: HashMap<S, (u32, Vec<f64>)>,
+    q_table: HashMap<S, (u32, Vec<f32>)>,
     stats: QLearningStats,
 }
 
@@ -218,7 +218,7 @@ impl<S: State, A: Action> Player<S, A> for QLearnedPlayer<S> {
 
 /// Get the maximum value and position of a list
 /// Panics if the list is empty
-fn max(values: &Vec<f64>) -> (usize, f64) {
+fn max(values: &Vec<f32>) -> (usize, f32) {
     let mut max_i = 0;
     let mut max_el = values[0];
     for (i, &value) in values.iter().enumerate().skip(1) {
