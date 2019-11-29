@@ -8,6 +8,10 @@ pub struct QLearningStats {
     pub random_actions: u32,
     pub dummy_actions: u32,
     pub learned_actions: u32,
+    pub episodes: u32,
+    pub q_table_size: u32,
+    pub q_table_per_depth: HashMap<u16, u32>,
+    pub epsilon: f32,
 }
 
 impl QLearningStats {
@@ -17,7 +21,18 @@ impl QLearningStats {
             random_actions: 0,
             dummy_actions: 0,
             learned_actions: 0,
+            episodes: 0,
+            q_table_size: 0,
+            q_table_per_depth: HashMap::new(),
+            epsilon: 0.,
         }
+    }
+
+    fn reset(&mut self) {
+        self.total_actions = 0;
+        self.random_actions = 0;
+        self.dummy_actions = 0;
+        self.learned_actions = 0;
     }
 }
 
@@ -37,7 +52,7 @@ pub struct QLearningPlayer<S: State> {
 
 impl<S: State> QLearningPlayer<S> {
     pub fn new() -> Self {
-        QLearningPlayer {
+        let mut player = QLearningPlayer {
             q_table: HashMap::new(),
             epsilon: 1.,
             min_epsilon: 0.1,
@@ -47,7 +62,9 @@ impl<S: State> QLearningPlayer<S> {
             prev_state: None,
             prev_action_index: None,
             stats: QLearningStats::new(),
-        }
+        };
+        player.stats.epsilon = player.epsilon;
+        player
     }
 
     fn update_q_table(&mut self, new_value: f32) {
@@ -66,15 +83,25 @@ impl<S: State, A: Action> Player<S, A> for QLearningPlayer<S> {
     type Stats = QLearningStats;
 
     fn take_action(&mut self, state: S, actions: Vec<A>) -> A {
+        let game_depth = state.game_depth();
         self.stats.total_actions += 1;
         self.prev_state = Some(state.clone());
 
         // Ensure the q-values are initialized for this state
+        let mut inserted = false;
         let action_values = &self
             .q_table
             .entry(state)
-            .or_insert_with(|| (0, vec![0.; actions.len()]))
+            .or_insert_with(|| {
+                inserted = true;
+                (0, vec![0.; actions.len()])
+            })
             .1;
+
+        if inserted {
+            self.stats.q_table_size += 1;
+            *self.stats.q_table_per_depth.entry(game_depth).or_default() += 1;
+        }
 
         let action_index = if random::<f32>() <= self.epsilon {
             // Take a random action
@@ -109,10 +136,12 @@ impl<S: State, A: Action> Player<S, A> for QLearningPlayer<S> {
     fn end(&mut self, _state: S, reward: f32) {
         self.update_q_table(reward);
         self.epsilon = (self.epsilon * self.epsilon_decay).max(self.min_epsilon);
+        self.stats.epsilon = self.epsilon;
+        self.stats.episodes += 1;
     }
 
     fn reset_stats(&mut self) {
-        self.stats = QLearningStats::new();
+        self.stats.reset();
     }
 
     fn stats(&self) -> Option<Self::Stats> {
@@ -127,10 +156,12 @@ where
     type Freezed = QLearnedPlayer<S>;
 
     fn freezed(&self) -> QLearnedPlayer<S> {
-        QLearnedPlayer {
+        let mut player = QLearnedPlayer {
             q_table: self.q_table.clone(),
-            stats: QLearningStats::new(),
-        }
+            stats: self.stats.clone(),
+        };
+        player.stats.reset();
+        player
     }
 
     fn cycle_end(&mut self) {
@@ -208,7 +239,7 @@ impl<S: State, A: Action> Player<S, A> for QLearnedPlayer<S> {
     }
 
     fn reset_stats(&mut self) {
-        self.stats = QLearningStats::new();
+        self.stats.reset();
     }
 
     fn stats(&self) -> Option<Self::Stats> {
