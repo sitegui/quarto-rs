@@ -1,5 +1,7 @@
 use crate::simple_players::*;
 use crate::traits::*;
+use std::fs::File;
+use std::io::prelude::*;
 
 /// Train a given player against itself
 pub fn train<S, A, P, E>(
@@ -9,12 +11,14 @@ pub fn train<S, A, P, E>(
     eval_episodes: u32,
     cycles: u32,
     opponent_epsilon: f32,
+    stats_file_name: &str,
 ) where
     S: State,
     A: Action,
     P: LearningPlayer<S, A>,
     E: Environment<State = S, Action = A>,
 {
+    let mut stats_file = File::create(stats_file_name).unwrap();
     let mut random_adversary = RandomPlayer::new();
     let mut adversary = OpponentWrapper::new(player.freezed(), opponent_epsilon);
     for cycle in 1..=cycles {
@@ -38,6 +42,8 @@ pub fn train<S, A, P, E>(
             eval_episodes,
         );
         let eval_random_stats = new_adversary.inner_mut().stats();
+        serde_json::to_writer(&stats_file, &eval_random_stats).unwrap();
+        stats_file.write("\n".as_bytes()).unwrap();
 
         adversary = new_adversary;
 

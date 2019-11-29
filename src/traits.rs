@@ -1,3 +1,5 @@
+use serde::Serialize;
+
 ///! Define traits for environment, action, players, etc
 
 /// The state of the environment
@@ -22,7 +24,7 @@ pub trait Environment {
 /// A player that can take actions from a given state.
 /// Unlink the environment, that defines it own state and action, players are generic over them
 pub trait Player<S: State, A: Action> {
-    type Stats: std::fmt::Debug;
+    type Stats: std::fmt::Debug + Serialize;
 
     fn take_action(&mut self, state: S, actions: Vec<A>) -> A;
 

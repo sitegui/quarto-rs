@@ -12,5 +12,13 @@ use train::*;
 fn main() {
     let mut env = Environment::new();
     let mut player = QLearningPlayer::new();
-    train(&mut env, &mut player, 100_000, 1_000, 10, 0.1);
+    train(
+        &mut env,
+        &mut player,
+        1_000_000,
+        1_000,
+        100,
+        0.1,
+        "stats_1m.jsonl",
+    );
 }

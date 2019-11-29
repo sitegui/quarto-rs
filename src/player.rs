@@ -1,17 +1,20 @@
 use crate::traits::*;
 use rand::prelude::*;
+use serde::Serialize;
 use std::collections::HashMap;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct QLearningStats {
     pub total_actions: u32,
     pub random_actions: u32,
     pub dummy_actions: u32,
     pub learned_actions: u32,
-    pub episodes: u32,
+    pub train_episodes: u32,
+    pub play_episodes: u32,
     pub q_table_size: u32,
     pub q_table_per_depth: HashMap<u16, u32>,
     pub epsilon: f32,
+    pub score: f32,
 }
 
 impl QLearningStats {
@@ -21,10 +24,12 @@ impl QLearningStats {
             random_actions: 0,
             dummy_actions: 0,
             learned_actions: 0,
-            episodes: 0,
+            train_episodes: 0,
+            play_episodes: 0,
             q_table_size: 0,
             q_table_per_depth: HashMap::new(),
             epsilon: 0.,
+            score: 0.,
         }
     }
 
@@ -33,6 +38,8 @@ impl QLearningStats {
         self.random_actions = 0;
         self.dummy_actions = 0;
         self.learned_actions = 0;
+        self.play_episodes = 0;
+        self.score = 0.;
     }
 }
 
@@ -130,6 +137,7 @@ impl<S: State, A: Action> Player<S, A> for QLearningPlayer<S> {
             .unwrap_or(0.);
         let new_value = reward + self.gamma * max_q_value;
         self.update_q_table(new_value);
+        self.stats.score += reward;
         self.take_action(state.clone(), actions)
     }
 
@@ -137,7 +145,9 @@ impl<S: State, A: Action> Player<S, A> for QLearningPlayer<S> {
         self.update_q_table(reward);
         self.epsilon = (self.epsilon * self.epsilon_decay).max(self.min_epsilon);
         self.stats.epsilon = self.epsilon;
-        self.stats.episodes += 1;
+        self.stats.train_episodes += 1;
+        self.stats.play_episodes += 1;
+        self.stats.score += reward;
     }
 
     fn reset_stats(&mut self) {
@@ -165,47 +175,43 @@ where
     }
 
     fn cycle_end(&mut self) {
-        println!(
-            "Q-table size = {}, epsilon = {}",
-            self.q_table.len(),
-            self.epsilon
-        );
-        println!("Stats = {:?}", self.stats());
         self.reset_stats();
 
-        // Load stats from q-table: hit count by (game depth, learned actions)
-        let mut stats: HashMap<(u16, u8), Vec<u32>> = HashMap::new();
-        for (state, (hit_count, q_values)) in &self.q_table {
-            let learned_actions =
-                q_values
-                    .iter()
-                    .fold(0, |num, &q_value| if q_value == 0. { num } else { num + 1 });
-            stats
-                .entry((state.game_depth(), learned_actions))
-                .or_default()
-                .push(*hit_count);
-        }
-        let mut stats: Vec<(u16, u8, u32, u32)> = stats
-            .into_iter()
-            .map(|(key, value)| {
-                (
-                    key.0,
-                    key.1,
-                    (value.iter().map(|&x| x as f32).sum::<f32>() / value.len() as f32) as u32,
-                    value.len() as u32,
-                )
-            })
-            .collect();
-        stats.sort_by_key(|v| (v.0, v.1));
-        println!("depth | learned actions | avg. visits | num. states");
-        for stat in stats {
-            if stat.0 > 1 {
-                continue;
+        if cfg!(stats_table) {
+            // Load stats from q-table: hit count by (game depth, learned actions)
+            let mut stats: HashMap<(u16, u8), Vec<u32>> = HashMap::new();
+            for (state, (hit_count, q_values)) in &self.q_table {
+                let learned_actions =
+                    q_values
+                        .iter()
+                        .fold(0, |num, &q_value| if q_value == 0. { num } else { num + 1 });
+                stats
+                    .entry((state.game_depth(), learned_actions))
+                    .or_default()
+                    .push(*hit_count);
             }
-            println!(
-                "{: >5} | {: >15} | {: >11} | {: >11}",
-                stat.0, stat.1, stat.2, stat.3
-            );
+            let mut stats: Vec<(u16, u8, u32, u32)> = stats
+                .into_iter()
+                .map(|(key, value)| {
+                    (
+                        key.0,
+                        key.1,
+                        (value.iter().map(|&x| x as f32).sum::<f32>() / value.len() as f32) as u32,
+                        value.len() as u32,
+                    )
+                })
+                .collect();
+            stats.sort_by_key(|v| (v.0, v.1));
+            println!("depth | learned actions | avg. visits | num. states");
+            for stat in stats {
+                if stat.0 > 1 {
+                    continue;
+                }
+                println!(
+                    "{: >5} | {: >15} | {: >11} | {: >11}",
+                    stat.0, stat.1, stat.2, stat.3
+                );
+            }
         }
     }
 }
@@ -236,6 +242,16 @@ impl<S: State, A: Action> Player<S, A> for QLearnedPlayer<S> {
                 actions[max(&action_values).0].clone()
             }
         }
+    }
+
+    fn step(&mut self, state: S, actions: Vec<A>, reward: f32) -> A {
+        self.stats.score += reward;
+        self.take_action(state, actions)
+    }
+
+    fn end(&mut self, _state: S, reward: f32) {
+        self.stats.play_episodes += 1;
+        self.stats.score += reward;
     }
 
     fn reset_stats(&mut self) {
